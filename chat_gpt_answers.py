@@ -12,7 +12,7 @@ import subprocess
 import time
 import OpenAI.chat_gpt as chat_gpt
 
-RESPONSE_LENGTH = 200
+RESPONSE_LENGTH = 170
 ASK_REDDIT_PROMPT = f"Answer the question as a Reddit commenter in {RESPONSE_LENGTH} words:\n"
 
 
