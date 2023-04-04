@@ -62,13 +62,14 @@ def main():
     current_video_duration += response_audio_duration
 
      # convert the pause(in seconds) into milliseconds
-    mp3_pause = pause * 1000
+    mp3_pause = pause * 2000
     add_pause(title_audio_path, title_audio_clean_path, mp3_pause)
     add_pause(response_audio_path,response_audio_clean_path, mp3_pause)
 
 
     title_image_path = f'{thread_id_path}/png/title.png'
     # create final video
+
     make_subtitled_video(title_audio_path=title_audio_clean_path,
                      answer_audio_path=response_audio_clean_path,
                      title_image_path=title_image_path,
@@ -88,8 +89,7 @@ if __name__ == '__main__':
     my_config = config.load_config()
     while True:
         print('Starting ..........\n')
-        for i in range(10):
-            main()
+        main()
         print('\n-------------------------------------------\n')
         time.sleep(my_config['App']['run_every'])
 

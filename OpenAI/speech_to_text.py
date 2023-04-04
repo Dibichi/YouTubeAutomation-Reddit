@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 
 MODEL = "medium"
 
+
 def correct_subs(script, subs):
     script_counter = 0
     script = script.split()
@@ -23,10 +24,10 @@ def correct_subs(script, subs):
             words[subs_counter] = words[subs_counter].replace(",", "").replace(".", "")
             subs_counter += 1
             script_counter += 1
-    
-    print(subs)
+        
+        print(words)
 
-def create_srt(file_input, file_output):
+def create_srt(file_input, time_offset=0):
     model = whisper.load_model(MODEL)
     result = model.transcribe(file_input)
 
@@ -34,23 +35,17 @@ def create_srt(file_input, file_output):
     dict1 = {'start':[], 'end':[], 'text':[]}
 
     for i in result['segments']:
-        dict1['start'].append(int(i['start']))
-        dict1['end'].append(int(i['end']))
-        dict1['text'].append(i['text'])
+        dict1['start'].append(i['start'] + time_offset)
+        dict1['end'].append(i['end'] + time_offset)
+        dict1['text'].append(i['text'].strip().replace(",", "").replace(".", ""))
     """
     df = pd.DataFrame.from_dict(dict1)
     print(df)
     """
     #df.to_csv(f'experiments/{name}/subs.csv')
-    subs = tuple(zip(tuple(zip(dict1['start'], dict1['end'])), dict1['text']))
+    subs = list(zip(list(zip(dict1['start'], dict1['end'])), dict1['text']))
     return subs
 
 def create_srt_file(file_input,  output_dir, output_format):
     command = f"whisper {file_input} --model {MODEL} -o {output_dir} -f {output_format}"
     os.system(command)
-
-convert = "R:\\CodingProjects\\Python\\YouTubeAutomation-Reddit\\Assets\\temp\\1130fnv\\mp3\\ai_response.mp3"
-start = timer()
-create_srt(convert, "")
-elapsed_time = timer() - start # in seconds
-print(elapsed_time)

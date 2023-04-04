@@ -15,14 +15,18 @@ from moviepy.video.VideoClip import ImageClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.video.compositing.concatenate import concatenate_videoclips
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.tools.subtitles import SubtitlesClip
+from moviepy.video.VideoClip import TextClip
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from moviepy.video.fx.resize import resize
 from moviepy.video.fx.crop import crop
-from moviepy.editor import vfx
+from moviepy.video.fx.speedx import speedx
+from moviepy.editor import *
 
 import random
 import time
 import config
+import OpenAI.speech_to_text as stt
 
 def prepare_random_background(length, W, H):
     my_config = config.load_config()
@@ -99,7 +103,7 @@ def make_final_video(
     opacity = 0.95
 
     print("Creating the final video 🎥")
-    background_clip = prepare_background(reddit_id, length,W,H)
+    background_clip = prepare_background(reddit_id,length,W,H)
 
 
 
@@ -159,6 +163,11 @@ def make_final_video(
     print("See result in the results folder!")
 
 
+def update_subtitle_times(time_update, subtitles):
+    for timestamps in subtitles:
+        timestamps[0] = timestamps[0] + time_update
+
+
 def make_subtitled_video(
     title_audio_path,
     answer_audio_path,
@@ -175,16 +184,10 @@ def make_subtitled_video(
     print("Creating the final video 🎥")
     background_clip = prepare_random_background(length,W,H)
 
-
-
     # Gather all audio clips
     audio_clips = [AudioFileClip(title_audio_path), AudioFileClip(answer_audio_path)]
     audio_concat = concatenate_audioclips(audio_clips)
     audio_composite = CompositeAudioClip([audio_concat])
-
-    if(audio_composite.duration > length):
-        speed_multiplier =  audio_composite.duration / length 
-        audio_composite = audio_composite.fx(vfx.speedx, speed_multiplier)
 
     print(f"Video Will Be: {length} Seconds Long")
 
@@ -197,7 +200,19 @@ def make_subtitled_video(
     screenshot_width = int((W * 90) // 100)
 
     title = ImageClip(title_image_path).set_duration(audio_clips[0].duration).set_opacity(new_opacity).set_position("center")
+    title_duration = audio_clips[0].duration
     resized_title = resize(title, width=screenshot_width)
+
+    subs = stt.create_srt(answer_audio_path, title_duration)
+    
+    generator = lambda txt: TextClip(txt, font='P052-Bold', fontsize=H/25, stroke_width=1, color='yellow', stroke_color = 'black', size = (W, H*.25), method='caption')
+    subtitles = SubtitlesClip(subs, generator)
+
+    if(audio_composite.duration > length):
+        speed_multiplier =  audio_composite.duration / length 
+        audio_composite = audio_composite.fx(speedx, speed_multiplier)
+        subtitles = subtitles.fx(speedx, speed_multiplier)
+
     image_clips.insert(
         0,
         resized_title,
@@ -206,8 +221,9 @@ def make_subtitled_video(
     image_concat = concatenate_videoclips(image_clips,)  # note transition kwarg for delay in imgs
     image_concat.audio = audio_composite
     audio_composite.close()
-    final = CompositeVideoClip([background_clip, image_concat.set_position("center")])
-        
+    
+    final = CompositeVideoClip([background_clip, image_concat.set_position("center"), subtitles.set_position("center")]).subclip(0, audio_composite.duration)
+
     image_concat.close()
 
     subreddit = reddit_id
